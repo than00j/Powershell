@@ -9,6 +9,9 @@ foreach($User in $UserList){
 
     #Get the primary STMP address
     $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
+    
+    #Add the primary SMTP and prefix 'sip:'
+    $SIPAddress = "SIP:$PrimarySMTP"
 
     #Get all the email addresses
     $EmailAddresses = $Mailbox.EmailAddresses
@@ -16,14 +19,15 @@ foreach($User in $UserList){
     #Find the user has SIP?
     $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
     if($OLDSIPAddress -eq $null){ New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
+    
+    if($OLDSIPAddress -ieq $SIPAddress){ New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" } ; continue }
 
     #If SIP found, remove it
     [bool]$IsRemoved = $EmailAddresses.Remove($OLDSIPAddress)
     if(-not $IsRemoved){ New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" } ; continue }
 
-    #Add the primary SMTP and prefix 'sip:'
-    $SIPAddress = "SIP:$PrimarySMTP"
-    $IsAdded = $EmailAddresses.Add($SIPAddress)
+    #Add the new sip to the Email Addresses List
+    $EmailAddresses.Add($SIPAddress)
 
     #Apply changed emailaddresses list
     Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
