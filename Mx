@@ -2,11 +2,10 @@ $UserList = Get-Content "C:\Temp\SIPUSers\SIPUSername.txt"
 
 foreach($User in $UserList){
   try{
-    $result = $null
     #Get the current user account
     $Maibox = Get-Mailbox $User
 
-    if($Maibox -eq $null){ $result = New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; return }
+    if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; return }
 
     #Get the primary STMP address
     $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
@@ -16,11 +15,11 @@ foreach($User in $UserList){
 
     #Find the user has SIP?
     $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
-    if($OLDSIPAddress -eq $null){ $result = New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
+    if($OLDSIPAddress -eq $null){ New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
 
     #If SIP found, remove it
     [bool]$IsRemoved = $EmailAddresses.Remove($SIPAddress)
-    if(-not $IsRemoved){ $result = New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" } ; continue }
+    if(-not $IsRemoved){ New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" } ; continue }
 
     #Add the primary SMTP and prefix 'sip:'
     $SIPAddress = "SIP:$PrimarySMTP"
@@ -29,10 +28,8 @@ foreach($User in $UserList){
     #Apply changed emailaddresses list
     Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
 
-    $result = New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"
+    New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"
   }catch{
-    $result = New-Object psobject -Property @{User = $User ; Result = "Error: $_"
-  }finally{
-    $result
+    New-Object psobject -Property @{User = $User ; Result = "Error: $_"
   }
 }
