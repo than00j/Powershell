@@ -1,0 +1,29 @@
+Get-Content "C:\Temp\SIPUSers\SIPUSername.txt" | ForEach-Object {
+
+  $Mailbox = Get-Mailbox $_
+
+ 
+
+  $EmailAddresses = $Mailbox.EmailAddresses
+
+ 
+
+  # Find and remove the old
+
+  $SIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -Like "SIP" }
+
+  $EmailAddresses.Remove($SIPAddress)
+
+ 
+
+  # Add the new one, based on the PrimarySmtpAddress
+
+  $EmailAddresses.Add("SIP:$($_.PrimarySmtpAddress)")
+
+ 
+
+  # Apply the change - test mode: -WhatIf
+
+  Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -WhatIf
+
+}
