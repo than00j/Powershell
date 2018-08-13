@@ -18,7 +18,7 @@ foreach($User in $UserList){
     if($OLDSIPAddress -eq $null){ New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
 
     #If SIP found, remove it
-    [bool]$IsRemoved = $EmailAddresses.Remove($SIPAddress)
+    [bool]$IsRemoved = $EmailAddresses.Remove($OLDSIPAddress)
     if(-not $IsRemoved){ New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" } ; continue }
 
     #Add the primary SMTP and prefix 'sip:'
