@@ -1,29 +1,38 @@
-Get-Content "C:\Temp\SIPUSers\SIPUSername.txt" | ForEach-Object {
+$UserList = Get-Content "C:\Temp\SIPUSers\SIPUSername.txt"
 
-  $Mailbox = Get-Mailbox $_
+foreach($User in $UserList){
+  try{
+    $result = $null
+    #Get the current user account
+    $Maibox = Get-Mailbox $User
 
- 
+    if($Maibox -eq $null){ $result = New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; return }
 
-  $EmailAddresses = $Mailbox.EmailAddresses
+    #Get the primary STMP address
+    $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
 
- 
+    #Get all the email addresses
+    $EmailAddresses = $Mailbox.EmailAddresses
 
-  # Find and remove the old
+    #Find the user has SIP?
+    $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
+    if($OLDSIPAddress -eq $null){ $result = New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
 
-  $SIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -Like "SIP" }
+    #If SIP found, remove it
+    [bool]$IsRemoved = $EmailAddresses.Remove($SIPAddress)
+    if(-not $IsRemoved){ $result = New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" } ; continue }
 
-  $EmailAddresses.Remove($SIPAddress)
+    #Add the primary SMTP and prefix 'sip:'
+    $SIPAddress = "SIP:$PrimarySMTP"
+    $IsAdded = $EmailAddresses.Add($SIPAddress)
 
- 
+    #Apply changed emailaddresses list
+    Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
 
-  # Add the new one, based on the PrimarySmtpAddress
-
-  $EmailAddresses.Add("SIP:$($_.PrimarySmtpAddress)")
-
- 
-
-  # Apply the change - test mode: -WhatIf
-
-  Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -WhatIf
-
+    $result = New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"
+  }catch{
+    $result = New-Object psobject -Property @{User = $User ; Result = "Error: $_"
+  }finally{
+    $result
+  }
 }
