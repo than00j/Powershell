@@ -18,7 +18,7 @@ foreach($User in $UserList){
 
     #Find the user has SIP?
     $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
-    if($OLDSIPAddress -eq $null){ New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
+    if($OLDSIPAddress.Count -eq 0){ New-Object psobject -Property @{User = $User ; Result = "No SIP address found" } ; continue }
     
     if($OLDSIPAddress -ieq $SIPAddress){ New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" } ; continue }
 
