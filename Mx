@@ -3,7 +3,7 @@ $UserList = Get-Content "C:\Temp\SIPUSers\SIPUSername.txt"
 foreach($User in $UserList){
   try{
     #Get the current user account
-    $Maibox = Get-Mailbox $User
+    $Maibox = Get-Mailbox $User -ErrorAction Stop
 
     if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; return }
 
