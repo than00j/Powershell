@@ -32,16 +32,16 @@ foreach($User in $UserList){
 
         }
         elseif($OLDSIPAddress.Count -eq 1){ 
-                        if($OLDSIPAddress -ieq $SIPAddress){ 
-            New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" }
-            continue 
-        }
+            if($OLDSIPAddress -ieq $SIPAddress){ 
+                New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" }
+                continue 
+            }
 
             #If SIP found, remove it
-                        if(-not $EmailAddresses.Remove($OLDSIPAddress)){
-            New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" }
-            continue 
-        }
+            if(-not $EmailAddresses.Remove($OLDSIPAddress)){
+                New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" }
+                continue 
+            }
 
             #Add the new sip to the Email Addresses List
             $EmailAddresses.Add($SIPAddress)
