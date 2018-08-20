@@ -3,50 +3,74 @@ Add-PSSnapin Microsoft.Exchange.Management.PowerShell.E2010
 $UserList = Get-Content "C:\Temp\SIPUSers\SIPUSername.txt"
 
 foreach($User in $UserList){
-  try{
-    #Get the current user account
-    $Maibox = Get-Mailbox $User -ErrorAction SilentlyContinue
+    try{
+        #Get the current user account
+        $Maibox = Get-Mailbox $User -ErrorAction SilentlyContinue
 
-    if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; continue }
+        if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; continue }
 
-    #Get the primary STMP address
-    $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
+        #Get the primary STMP address
+        $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
     
-    #Add the primary SMTP and prefix 'sip:'
-    $SIPAddress = "SIP:$PrimarySMTP"
+        #Add the primary SMTP and prefix 'sip:'
+        $SIPAddress = "SIP:$PrimarySMTP"
 
-    #Get all the email addresses
-    $EmailAddresses = $Mailbox.EmailAddresses
+        #Get all the email addresses
+        $EmailAddresses = $Mailbox.EmailAddresses
 
-    #Find the user has SIP?
-    $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
-    if($OLDSIPAddress.Count -eq 0){ 
-           
-      #Add the new sip to the Email Addresses List
-      $EmailAddresses.Add($SIPAddress)
+        #Find the user has SIP?
+        $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
 
-      #Apply changed emailaddresses list
-      Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
+        if($OLDSIPAddress.Count -eq 0){     
+            #Add the new sip to the Email Addresses List
+            $EmailAddresses.Add($SIPAddress)
 
-      New-Object psobject -Property @{User = $User ; Result = "No SIP address found, new $SIPAddress Added"}      
+            #Apply changed emailaddresses list
+            Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
+
+            New-Object psobject -Property @{User = $User ; Result = "No SIP address found, new $SIPAddress Added"}
+
+        }
+        elseif($OLDSIPAddress.Count -eq 1){ 
+                        if($OLDSIPAddress -ieq $SIPAddress){ 
+            New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" }
+            continue 
+        }
+
+            #If SIP found, remove it
+                        if(-not $EmailAddresses.Remove($OLDSIPAddress)){
+            New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" }
+            continue 
+        }
+
+            #Add the new sip to the Email Addresses List
+            $EmailAddresses.Add($SIPAddress)
+
+            #Apply changed emailaddresses list
+            Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
+
+            New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"}
+        }
+        elseif($OLDSIPAddress.Count -gt 1){
+            [bool]$CanAdd = $true
+            foreach($curSIPAddress in $OLDSIPAddress){
+                #If SIP found, remove it
+                if(-not $EmailAddresses.Remove($curSIPAddress)){
+                    $CanAdd = $false
+                }
+            }
       
-    }else{
-    
-      if($OLDSIPAddress -ieq $SIPAddress){ New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" } ; continue }
+            if($CanAdd){
+                #Add the new sip to the Email Addresses List
+                $EmailAddresses.Add($SIPAddress)
+                #Apply changed emailaddresses list
+                Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
 
-      #If SIP found, remove it
-      [bool]$IsRemoved = $EmailAddresses.Remove($OLDSIPAddress)
-      if(-not $IsRemoved){ New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" } ; continue }
-
-      #Add the new sip to the Email Addresses List
-      $EmailAddresses.Add($SIPAddress)
-
-      #Apply changed emailaddresses list
-      Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
-
-      New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"}
+                New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"} 
+            }
+        }
     }
-  }catch{
-    New-Object psobject -Property @{User = $User ; Result = "Error: $_" }
-  }
+    catch{
+        New-Object psobject -Property @{User = $User ; Result = "Error: $_" }
+    }
 }
