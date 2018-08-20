@@ -7,7 +7,7 @@ foreach($User in $UserList){
     #Get the current user account
     $Maibox = Get-Mailbox $User -ErrorAction SilentlyContinue
 
-    if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; return }
+    if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; continue }
 
     #Get the primary STMP address
     $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
