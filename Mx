@@ -5,9 +5,9 @@ $UserList = Get-Content "C:\Temp\SIPUSers\SIPUSername.txt"
 foreach($User in $UserList){
     try{
         #Get the current user account
-        $Maibox = Get-Mailbox $User -ErrorAction SilentlyContinue
+        $Mailbox = Get-Mailbox $User -ErrorAction SilentlyContinue
 
-        if($Maibox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; continue }
+        if($Mailbox -eq $null){ New-Object psobject -Property @{User = $User ; Result = "User mailbox not found" } ; continue }
 
         #Get the primary STMP address
         $PrimarySMTP = $Mailbox.PrimarySMTPAddress.Address
