@@ -32,7 +32,7 @@ foreach($User in $UserList){
 
         }
         elseif($OLDSIPAddress.Count -eq 1){ 
-            if($OLDSIPAddress -ieq $SIPAddress){ 
+            if($OLDSIPAddress.AddressString -ieq $SIPAddress){ 
                 New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" }
                 continue 
             }
