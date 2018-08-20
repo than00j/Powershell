@@ -1,3 +1,5 @@
+Add-PSSnapin Microsoft.Exchange.Management.PowerShell.E2010
+
 $UserList = Get-Content "C:\Temp\SIPUSers\SIPUSername.txt"
 
 foreach($User in $UserList){
