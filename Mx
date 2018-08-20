@@ -19,55 +19,27 @@ foreach($User in $UserList){
         $EmailAddresses = $Mailbox.EmailAddresses
 
         #Find the user has SIP?
-        $OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
+        [array]$OLDSIPAddress = $EmailAddresses | Where-Object { $_.PrefixString -ilike "sip" }
+        
+        [bool]$CanAdd = $true
 
-        if($OLDSIPAddress.Count -eq 0){     
-            #Add the new sip to the Email Addresses List
-            $EmailAddresses.Add($SIPAddress)
-
-            #Apply changed emailaddresses list
-            Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
-
-            New-Object psobject -Property @{User = $User ; Result = "No SIP address found, new $SIPAddress Added"}
-
-        }
-        elseif($OLDSIPAddress.Count -eq 1){ 
-            if($OLDSIPAddress.AddressString -ieq $SIPAddress){ 
-                New-Object psobject -Property @{User = $User ; Result = "OLD & NEW SIP address are the same" }
-                continue 
-            }
-
-            #If SIP found, remove it
-            if(-not $EmailAddresses.Remove($OLDSIPAddress)){
-                New-Object psobject -Property @{User = $User ; Result = "Unable to remove SIP address" }
-                continue 
-            }
-
-            #Add the new sip to the Email Addresses List
-            $EmailAddresses.Add($SIPAddress)
-
-            #Apply changed emailaddresses list
-            Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
-
-            New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"}
-        }
-        elseif($OLDSIPAddress.Count -gt 1){
-            [bool]$CanAdd = $true
+        if($OLDSIPAddress.Count -ge 1){ 
             foreach($curSIPAddress in $OLDSIPAddress){
                 #If SIP found, remove it
                 if(-not $EmailAddresses.Remove($curSIPAddress)){
                     $CanAdd = $false
                 }
             }
-      
-            if($CanAdd){
-                #Add the new sip to the Email Addresses List
-                $EmailAddresses.Add($SIPAddress)
-                #Apply changed emailaddresses list
-                Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
+        }
+        
+        if($CanAdd){
+            #Add the new sip to the Email Addresses List
+            $EmailAddresses.Add($SIPAddress)
 
-                New-Object psobject -Property @{User = $User ; Result = "SIP $SIPAddress Added"} 
-            }
+            #Apply changed emailaddresses list
+            Set-Mailbox $Mailbox.DistinguishedName -EmailAddresses $EmailAddresses -ErrorAction Stop
+
+            New-Object psobject -Property @{User = $User ; Result = "$SIPAddress Added"}
         }
     }
     catch{
