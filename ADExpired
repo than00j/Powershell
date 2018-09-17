@@ -1,3 +1,123 @@
+#All 3 requirements combined.
+$From = "ADAccountReport@test.com"
+$SMTPServer = "smtprelay.test.com" 
+$Date = Get-Date -Format M-dd-yyyy
+$ReportPath = "C:\temp"
+$DisabledOU = "OU=Terminated,OU=Users,OU=Home Office,OU=test,DC=test,DC=com"
+
+Import-Module ActiveDirectory
+
+#region about to expire in 7 days
+
+$startTime = (Get-Date).Date.AddDays(7)
+$endTime = $startTime.AddDays(1)
+
+$startFileTime = $startTime.ToFileTime()
+$endFileTime = $endTime.ToFileTime()
+
+
+[string]$FilterOnly = "accountExpires -ge $startFileTime -and accountExpires -lt $endFileTime"
+
+[array]$UserAccountList = @()
+[string[]]$UserEmailAddresses = @()
+
+$UserAccountList = Get-ADUser -Properties accountExpires, AccountExpirationDate, EmailAddress -Filter $FilterOnly | `
+Where-Object { $_.DistinguishedName -notlike "*$DisabledOU" } | `
+ForEach-Object {
+    $UserEmailAddresses += $_.EmailAddress
+    New-Object PsObject -Property @{
+        Name = $_.Name
+        SamAccountName = $_.SamAccountName
+        AccountExpirationDate = $_.AccountExpirationDate
+        Enabled = $_.Enabled
+        DistinguishedName = $_.DistinguishedName
+    }
+}
+
+if($UserAccountList.Count -eq 0){
+    "No user account(s) found under 7 days"
+}
+else{
+    $UserAccountList | Export-Csv -Path "$ReportPath\UserAccountsAboutToExpireIn7days.csv" -NoTypeInformation
+    Send-MailMessage -From $From -Subject "AD User Objects about to be expired in 7 days" -Body "The attached CSV file contains a list of user accounts that are due to expire in the next 7 days." -To $UserEmailAddresses
+}
+
+#endregion
+
+#region about to expire in 3 days
+
+$startTime = (Get-Date).Date.AddDays(3)
+$endTime = $startTime.AddDays(1)
+
+$startFileTime = $startTime.ToFileTime()
+$endFileTime = $endTime.ToFileTime()
+
+$FilterOnly = "accountExpires -ge $startFileTime -and accountExpires -lt $endFileTime"
+
+$UserAccountList = @()
+$UserEmailAddresses = @()
+[string[]]$ManagerEmailAddresses = @()
+
+$UserAccountList = Get-ADUser -Properties manager, accountExpires, AccountExpirationDate, EmailAddress -Filter $FilterOnly | `
+Where-Object { $_.DistinguishedName -notlike "*$DisabledOU" } | `
+ForEach-Object {
+    $UserEmailAddresses += $_.EmailAddress
+    $ManagerEmailAddresses += (Get-ADUser -Identity $_.Manager -Properties EmailAddress).EmailAddress
+
+    New-Object PsObject -Property @{
+        Name = $_.Name
+        SamAccountName = $_.SamAccountName
+        AccountExpirationDate = $_.AccountExpirationDate
+        Enabled = $_.Enabled
+        DistinguishedName = $_.DistinguishedName
+    }
+}
+
+if($UserAccountList.Count -eq 0){
+    "No user account(s) found under 3 days"
+}
+else{
+    $UserAccountList | Export-Csv -Path "$ReportPath\UserAccountsAboutToExpireIn3days.csv" -NoTypeInformation
+    Send-MailMessage -From $From -Subject "AD User Objects about to be expired in 3 days" -Body "The attached CSV file contains a list of user accounts that are due to expire in the next 3 days." -To $UserEmailAddresses -Cc $ManagerEmailAddresses
+}
+
+#endregion
+
+#region account expired
+$UserAccountList = @()
+
+$UserAccountList = Search-ADAccount -AccountExpired -UsersOnly -ResultPageSize 2000 -resultSetSize $null | `
+Where-Object { $_.DistinguishedName -notlike "*$DisabledOU" } | `
+ForEach-Object {
+    [bool]$ADAccountMoved = $false
+
+    try{
+        $null = Move-ADObject -Identity $_.SamAccountName -TargetPath $DisabledOU -Confirm:$false -ErrorAction Stop
+        $ADAccountMoved = $true
+    }catch{}
+
+    New-Object PsObject -Property @{
+        Name = $_.Name
+        SamAccountName = $_.SamAccountName
+        AccountExpirationDate = $_.AccountExpirationDate
+        Enabled = $_.Enabled
+        DistinguishedName = $_.DistinguishedName
+        AccountMoved = $ADAccountMoved
+    }
+}
+
+if($UserAccountList.Count -eq 0){
+    "No user account(s) got expired today"
+}
+else{
+    $UserAccountList | Export-Csv -Path "$ReportPath\ExpiredUserAccounts.csv" -NoTypeInformation
+}
+#endregion
+
+<# ###################################################################################
+    Do not use anything below
+ # ###################################################################################
+
 $List = Search-Adaccount -AccountExpiring -Timespan 07.00:00:00 | 
 Where-Object {$_.DistinguishedName -like "*OU=test,DC=Domain,DC=com"}
 
@@ -129,3 +249,4 @@ ForEach-Object {
 Send-MailMessage -To $To -From $From -Subject $Subject -Body $Body -SMTPServer $SMTPServer -Attachments "c:\temp\manager.txt" 
 
 ------------------------------------------------------------------------------------------------------      
+#>
