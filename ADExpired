@@ -39,7 +39,7 @@ if($UserAccountList.Count -eq 0){
 }
 else{
     $UserAccountList | Export-Csv -Path "$ReportPath\UserAccountsAboutToExpireIn7days.csv" -NoTypeInformation
-    Send-MailMessage -From $From -Subject "AD User Objects about to be expired in 7 days" -Body "The attached CSV file contains a list of user accounts that are due to expire in the next 7 days." -To $UserEmailAddresses
+    Send-MailMessage -From $From -Subject "AD User Objects about to be expired in 7 days" -Body "The attached CSV file contains a list of user accounts that are due to expire in the next 7 days." -To $UserEmailAddresses  -SMTPServer $SMTPServer -Attachments "$ReportPath\UserAccountsAboutToExpireIn7days.csv"
 }
 
 #endregion
@@ -78,7 +78,7 @@ if($UserAccountList.Count -eq 0){
 }
 else{
     $UserAccountList | Export-Csv -Path "$ReportPath\UserAccountsAboutToExpireIn3days.csv" -NoTypeInformation
-    Send-MailMessage -From $From -Subject "AD User Objects about to be expired in 3 days" -Body "The attached CSV file contains a list of user accounts that are due to expire in the next 3 days." -To $UserEmailAddresses -Cc $ManagerEmailAddresses
+    Send-MailMessage -From $From -Subject "AD User Objects about to be expired in 3 days" -Body "The attached CSV file contains a list of user accounts that are due to expire in the next 3 days." -To $UserEmailAddresses -Cc $ManagerEmailAddresses  -SMTPServer $SMTPServer -Attachments "$ReportPath\UserAccountsAboutToExpireIn3days.csv"
 }
 
 #endregion
