@@ -1,0 +1,131 @@
+$List = Search-Adaccount -AccountExpiring -Timespan 07.00:00:00 | 
+Where-Object {$_.DistinguishedName -like "*OU=test,DC=Domain,DC=com"}
+
+$List | export-csv "c:\temp\expiring_accounts.csv"    7 days prior information
+-------------------------------------------------------------
+Get-ADUser -Properties AccountExpires -Filter * | Where-Object {
+    ($_.DistinguishedName -like "*OU=test,DC=test,DC=com") -and 
+
+($_.AccountExpires -eq 130278384000000000 )
+}
+------------------------------------------------------------------------
+$users = Get-ADUser -Filter * -Properties AccountExpirationDate | Where-Object {$_.DistinguishedName -notlike "*OU=test,DC=test,DC=com"}
+$manager = Get-ADUser -Identity $account -Properties EmailAddress,Manager | %{(Get-AdUser $_.Manager -Properties 
+
+EmailAddress).EmailAddress}
+
+ForEach ($user in $users) {
+
+    If ( $user.AccountExpirationDate.Date -eq (Get-Date).AddDays(11).Date ) { Send-MailMessage -to $manager -from "$user"  -subject "$subject" -body "$Body" -smtpServer "$Smtpserver"
+
+}
+-------------------------------------------------------------------------------
+$startTime =(Get-Date).Date.AddDays(7).ToUniversalTime().ToUniversalTime().ToUniversalTime().ToUniversalTime()
+$endTime = $startTime.AddDays(1)
+
+$startTime64 = $startTime.ToFileTimeUtc()
+$endTime64 = $endTime.ToFileTimeUtc()
+
+$filter = "accountExpires -ge -and accountExpires -lt $endTime64"
+
+Get-ADUser -Properties manager,AccountExpires -Filter $filter |
+Where-Object { $_.distinguishedName -notlike '*OU=test,DC=test,DC=com' } |
+ForEach-Object {
+    $user = $_
+    
+    $managerEmail = $null
+    if (-not [string]::IsNullOrEmpty($user.Manager))
+    {
+        $managerEmail = Get-ADUser -Identity $user.Manager -Properties EmailAddress | Select-Object -ExpandProperty EmailAddress
+    }
+
+    if (-not [string]::IsNullOrEmpty($managerEmail))
+    {
+        $params = @{
+            To = $managerEmail
+            From = 'Whatever@domain.com'
+            Subject = "Account $($user.SamAccountName) is expiring on $($startTime.ToShortDateString())"
+            Body = "Account $($user.SamAccountName) is expiring on $($startTime.ToShortDateString())"
+            SmtpServer = 'smtp.domain.com'
+        }
+
+        Send-MailMessage @params
+    }
+}
+--------------------------------------------------------------------
+
+import-module activedirectory
+
+$To = "test@test.com" 
+$From = "upadmins <upadmins@test.com>"
+$Subject = "Daily expiring user report" 
+$Body = "The attached CSV file contains a list of user accounts that are due to expire in the next 7 days." 
+$SMTPServer = "smtprelay.test.com" 
+$Date = Get-Date -format M-dd-yyyy
+$ReportName = "C:\temp\Expiring User Accounts $Date.csv"
+
+
+$out = @()
+
+$startTime = (Get-Date).Date.AddDays(7)
+$endTime = $startTime.AddDays(1)
+
+$startTime64 = $startTime.ToFileTime()
+$endTime64 = $endTime.ToFileTime()
+
+
+$filter = "accountExpires -ge $startTime64 -and accountExpires -lt $endTime64"
+
+Get-ADUser -Properties manager,AccountExpires -Filter $filter |
+Where-Object { $_.DistinguishedName -notlike '*OU=Terminated,OU=Users,OU=Home Office,OU=test,DC=test,DC=com' } |
+ForEach-Object {
+    $user = $_
+
+        $props = @{
+            Name = $user.name
+        SamAccountName = $user.SamAccountName
+            accountexpirationdate = $user.accountexpirationdate
+            Enabled = $user.enabled
+        DN = $user.Distinguishedname 
+   
+}
+        
+        
+$out += New-Object PsObject -Property $props | export-csv "$ReportName" -notypeinformation
+
+    }
+
+$out
+
+Send-MailMessage -To $To -From $From -Subject $Subject -Body $Body -SMTPServer $SMTPServer -Attachments $ReportName 
+
+
+$startTime = (Get-Date).Date.AddDays(7)
+$endTime = $startTime.AddDays(1)
+
+$startTime64 = $startTime.ToFileTime()
+$endTime64 = $endTime.ToFileTime()
+
+
+$filter = "accountExpires -ge $startTime64 -and accountExpires -lt $endTime64"
+
+Get-ADUser -Properties manager,AccountExpires -Filter $filter |
+Where-Object { $_.DistinguishedName -notlike '*OU=Terminated,OU=Users,OU=Home Office,OU=test,DC=test,DC=com' } |
+ForEach-Object {
+    $user = $_
+    
+    $managerEmail = test@test.com
+    if (-not [string]::IsNullOrEmpty($user.Manager))
+    {
+        $managerEmail = Get-ADUser -Identity $user.Manager -Properties EmailAddress | Select-Object -ExpandProperty EmailAddress
+    }
+
+    if (-not [string]::IsNullOrEmpty($managerEmail))
+    {
+     get-aduser "$_" | select name, samaccountname, manager | out-file "c:\temp\manager.txt" -append
+        }
+
+        
+Send-MailMessage -To $To -From $From -Subject $Subject -Body $Body -SMTPServer $SMTPServer -Attachments "c:\temp\manager.txt" 
+
+------------------------------------------------------------------------------------------------------      
