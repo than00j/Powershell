@@ -1,0 +1,70 @@
+Get-CMDeviceCollection | % {if((($_.RefreshSchedule).MinuteSpan -gt 0) -and $_.RefreshSchedule).MinuteSpan -lt 60){$_.Name; Set-CMDeviceCollection -InputObject $_ -RefreshSchedule (New-CMSchedule -RecurInterval Hours -RecurCount 2)}}
+
+#==== OR ==============
+
+#===================================
+
+[CmdletBinding()]
+param ([string]$SMSProvider)
+
+Function Get-SiteCode
+{
+    $wqlQuery = “SELECT * FROM SMS_ProviderLocation”
+    $a = Get-WmiObject -Query $wqlQuery -Namespace “root\sms” -ComputerName $SMSProvider
+    $a | ForEach-Object {
+        if($_.ProviderForLocalSite)
+            {
+                $script:SiteCode = $_.SiteCode
+            }
+    }
+return $SiteCode
+}
+
+Function Convert-NormalDateToConfigMgrDate {
+    [CmdletBinding()]
+    param (
+        [parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [string]$starttime
+    )
+    return [System.Management.ManagementDateTimeconverter]::ToDMTFDateTime($starttime)
+}
+
+Function create-ScheduleToken {
+$SMS_ST_RecurInterval = "SMS_ST_RecurInterval"
+$class_SMS_ST_RecurInterval = [wmiclass]""
+$class_SMS_ST_RecurInterval.psbase.Path ="\\$($SMSProvider)\ROOT\SMS\Site_$($SiteCode):$($SMS_ST_RecurInterval)"
+$script:scheduleToken = $class_SMS_ST_RecurInterval.CreateInstance()
+    if($scheduleToken)
+        {
+        $scheduleToken.DayDuration = 0
+        $scheduleToken.DaySpan = 0
+        $scheduleToken.HourDuration = 0
+        $scheduleToken.HourSpan = 4
+        $scheduleToken.IsGMT = $false
+        $scheduleToken.MinuteDuration = 0
+        $scheduleToken.MinuteSpan = 0
+        $scheduleToken.StartTime = (Convert-NormalDateToConfigMgrDate $startTime)
+        }
+}
+
+[datetime]$startTime = [datetime]::Today
+$SiteCode = Get-SiteCode
+create-ScheduleToken
+
+$Collections = Get-WmiObject -Class SMS_Collection -Namespace root\sms\site_$SiteCode -Filter "CollectionType = '2' AND Name like 'SUM%'"
+
+foreach ($Collection in $Collections)
+    {
+        try
+            {
+                $Coll = Get-WmiObject -Class SMS_Collection -Namespace root\sms\site_$SiteCode -ComputerName $SMSProvider -Filter "CollectionID ='$($Collection.CollectionID)'"
+                $Coll = [wmi]$Coll.__PATH
+                $Coll.RefreshSchedule = $scheduletoken
+                $Coll.put() | Out-Null
+                Write-Verbose "Successfully edited Collection $($Coll.Name)."
+            }
+        catch
+            {
+                Write-Verbose "$($Coll.Name) could not be edited."
+            }
+    }
