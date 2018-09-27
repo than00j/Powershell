@@ -1,0 +1,15 @@
+Import-CSV c:\"computers.csv" | % { 
+    $Server = $_.ServerName
+	$alivetest = Test-Path "\\$Server\c$\"
+	If ($alivetest -eq "True")
+		Copy-item "\\Server\c$\Windows\System32\drivers\etc\hosts" -destination "\\Server\c$\Windows\System32\drivers\etc\hostsbackup"
+
+(Get-Content "$($env:windir)\system32\Drivers\etc\hosts")  -replace ('^\s*10.4.114.23\s+RAJA.RENU.COM','10.4.114.23 RR.com') |
+    Out-File "$($env:windir)\system32\Drivers\etc\hosts" -Force
+
+Write-Host "removed or replaced records on $Server" -foregroundcolor Green
+}
+	Else 
+		{
+            Write-Host -Fore Red "Can't Access $Server failed try after sometime make sure its online" 
+		}
